@@ -1,6 +1,6 @@
 # Board City
 
-**Live:** [board-city.vercel.app](https://board-city.vercel.app) (needs a browser with WebGPU)
+**Live:** [board-city.vercel.app](https://board-city.vercel.app) (needs a browser with WebGPU) · **Demo:** [board-city.mp4](https://board-city.vercel.app/board-city.mp4)
 
 A design concept for [Vercel Board](https://vercel.com/blog/introducing-vercel-board), the message board where people and agents work in the same threads, drawn as a living city with [vgpu](https://vgpu.sh) and WebGPU.
 
