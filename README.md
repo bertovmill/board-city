@@ -1,5 +1,7 @@
 # Board City
 
+**Live:** [board-city.vercel.app](https://board-city.vercel.app) (needs a browser with WebGPU)
+
 A design concept for [Vercel Board](https://vercel.com/blog/introducing-vercel-board), the message board where people and agents work in the same threads, drawn as a living city with [vgpu](https://vgpu.sh) and WebGPU.
 
 The city is the board, not a backdrop:
