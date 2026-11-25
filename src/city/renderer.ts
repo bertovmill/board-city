@@ -39,6 +39,8 @@ export interface CityBoard {
   screenPosition(neighborhood: number, outward?: number): { x: number; y: number } | null;
   /** Turn the idle orbit on or off (the board's Pause control). */
   autoOrbit(on: boolean): void;
+  /** Ease the camera to look at a set of neighborhoods from `distance` (the example's home view is 150). */
+  focus(neighborhoods: readonly number[], distance: number): void;
 }
 
 interface Settings {
@@ -269,6 +271,20 @@ export function createRenderer({ canvas, container = canvas.parentElement ?? und
       city?.selectNeighborhood(neighborhood);
       syncGui?.();
     }),
+    focus: (neighborhoods, distance) => {
+      if (!city || neighborhoods.length === 0) return;
+      let x = 0;
+      let z = 0;
+      for (const index of neighborhoods) {
+        const hood = city.neighborhoods[index];
+        if (!hood) return;
+        x += hood.plan.center[0] + hood.offset.x;
+        z += hood.plan.center[1] + hood.offset.z;
+      }
+      goal.target.set([x / neighborhoods.length, HOME_VIEW.target[1], z / neighborhoods.length]);
+      goal.pan.fill(0);
+      goal.distance = distance;
+    },
     autoOrbit: (on) => {
       if (liveSettings) liveSettings.autoOrbit = on;
     },

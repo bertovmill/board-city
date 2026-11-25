@@ -3,7 +3,7 @@ import { createRenderer } from "./city/renderer";
 // Board City: Vercel Board drawn as vgpu's Modular City. One model drives everything:
 // a channel is a lit block, a thread is a building on it, and the building's color is the
 // thread's state (the same four colors as the key). Click a building to open its thread.
-// A mockup: the timeline at the bottom replays a made-up morning, then starts over.
+// A mockup: story() at the bottom replays one made-up beat of about 20 seconds, then starts over.
 
 type State = "waiting" | "answered" | "held" | "done";
 // layout.ts SWATCHES. Not terracotta: every roof in the city is terracotta, so it would not read as a state.
@@ -246,84 +246,99 @@ async function relayAnswers(t: Thread, tool: string, html: string) {
   draw();
 }
 
-/** What the board already holds when the story starts, so the blocks are not empty. */
+/** What the board already holds when the story starts: a busy week, mostly settled. */
+const HISTORY: Record<Channel, readonly [string, string, State][]> = {
+  questions: [
+    ["Who owns the Lumen demo follow-up?", "Maya", "answered"],
+    ["Is the Harbor Goods workbook shared yet?", "Sam", "answered"],
+    ["When is Northwind's next review?", "Berto", "answered"],
+    ["Which connectors does Atlas use?", "Priya", "answered"],
+    ["Did Lumen sign off on the brief?", "Sam", "answered"],
+    ["What did Harbor Goods say about pricing?", "Maya", "answered"],
+    ["How many interviews does Atlas have?", "Berto", "answered"],
+    ["Is the Northwind prototype on staging?", "Priya", "answered"],
+    ["Where are the Lumen meeting notes?", "Sam", "answered"],
+  ],
+  feedback: [
+    ["Northwind: timeline dates read as US format", "Berto", "done"],
+    ["Lumen: chart legend covers the last bar", "Maya", "done"],
+    ["Atlas: search ignores accents", "Priya", "done"],
+    ["Harbor Goods: logo is blurry on retina", "Sam", "done"],
+    ["Northwind: export button hidden on mobile", "Berto", "answered"],
+    ["Lumen: wants weekly instead of daily emails", "Maya", "done"],
+    ["Atlas: empty state reads as an error", "Priya", "done"],
+    ["Harbor Goods: filters reset on back", "Sam", "answered"],
+  ],
+  daily: [
+    ["Digest, Monday", "relay", "answered"],
+    ["Digest, Tuesday", "relay", "answered"],
+    ["Digest, Wednesday", "relay", "answered"],
+    ["Digest, Thursday", "relay", "answered"],
+    ["Digest, Friday", "relay", "answered"],
+    ["Digest, last Monday", "relay", "answered"],
+    ["Digest, last Tuesday", "relay", "answered"],
+    ["Digest, last Wednesday", "relay", "answered"],
+  ],
+  tasks: [
+    ["Lumen: write the demo recap", "claude", "done"],
+    ["Harbor Goods: invite the team", "codex", "done"],
+    ["Northwind: write the spec", "claude", "held"],
+    ["Atlas: fix the not-found labels", "codex", "held"],
+    ["Lumen: tidy the transcript", "claude", "done"],
+    ["Atlas: map the pricing jobs", "codex", "done"],
+    ["Northwind: draft the review deck", "claude", "done"],
+    ["Harbor Goods: clean the logo set", "codex", "done"],
+    ["Lumen: build the alerts page", "claude", "done"],
+  ],
+};
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+
 function history() {
-  post("questions", "Maya", "Who owns the Lumen demo follow-up?", { who: "Maya", html: "Who owns the Lumen demo follow-up?" }, "answered", "8:12 AM")
-    .messages.push({ who: "relay", via: "agent", agent: true, html: "Berto, per the demo recap. Due Friday.", tool: "ask_projects" });
-  post("questions", "Sam", "Is the Harbor Goods workbook shared yet?", { who: "Sam", html: "Is the Harbor Goods workbook shared yet?" }, "answered", "8:40 AM")
-    .messages.push({ who: "relay", via: "agent", agent: true, html: "Yes, since yesterday. Nine pages opened, no answers yet.", tool: "ask_projects" });
-  post("feedback", "Berto", "Northwind: timeline dates read as US format", { who: "Berto", html: "Northwind's timeline shows 04/11, they read it as 11 April." }, "done", "Tue");
-  post("tasks", "Maya", "Lumen: write the demo recap", { who: "Maya", html: "Write up the demo recap from the transcript." }, "done", "Mon");
-  post("tasks", "Berto", "Harbor Goods: invite the team to the workbook", { who: "Berto", html: "Send the invites." }, "done", "Tue");
+  for (const c of CHANNELS) {
+    HISTORY[c.name].forEach(([title, author, state], i) => {
+      const agent = author === "relay" || author === "claude" || author === "codex";
+      const t = post(c.name, author, title, { who: author, via: agent ? "agent" : undefined, agent, html: title }, state, DAYS[i % DAYS.length]);
+      if (state === "answered" && !agent) t.messages.push({ who: "relay", via: "agent", agent: true, html: "Answered from the project's records.", tool: "ask_projects" });
+    });
+  }
 }
 
-async function morning() {
+const BOARD = CHANNELS.map((c) => c.hood);
+const WIDE = 92; // the four channel blocks fill the gap between the panels
+const CLOSE = 48; // one block
+
+/**
+ * One beat, about 20 seconds: a question arrives and its building rises in ochre on #questions,
+ * relay answers, the building turns teal glass, and the camera pulls back over the whole board.
+ */
+async function story() {
   resetCity();
   threads = [];
   nextKey = 1;
-  AGENTS.forEach((a) => (a.doing = a.name === "relay" ? "watching 4 channels" : "idle"));
+  AGENTS.forEach((a) => (a.doing = a.name === "relay" ? "watching 4 channels" : a.name === "claude" ? "holds Northwind spec" : "holds Atlas labels"));
   history();
+  city.focus(BOARD, WIDE);
   openChannel("questions");
-  await sleep(2200);
+  await sleep(3000);
 
-  // 9:00: the scheduled digest.
-  let t = post("daily", "relay", "Morning digest", { who: "relay", via: "agent", agent: true, html: "3 projects moved overnight. <b>Lumen</b> shipped its recap, <b>Harbor Goods</b> opened its workbook, <b>Atlas</b> recorded two decisions.", tool: "ask_projects" }, "answered");
-  pulse(hoodOf("daily"));
-  open(t);
-  await sleep(3200);
-
-  // A question, answered.
-  openChannel("questions");
+  city.focus([hoodOf("questions")], CLOSE);
   await type("Which projects are furthest along, and what is each waiting on?");
-  t = post("questions", "Berto", "Which projects are furthest along?", { who: "Berto", html: "Which projects are furthest along, and what is each waiting on?" });
+  const t = post("questions", "Berto", "Which projects are furthest along?", { who: "Berto", html: "Which projects are furthest along, and what is each waiting on?" });
   pulse(hoodOf("questions"));
   open(t);
   draw(t);
+  await sleep(1200);
   await relayAnswers(t, "ask_projects", "<ul><li><b>Northwind</b>: 44 of 54 answers, prototype built. Next, a spec.</li><li><b>Lumen</b>: prototype built. Next, innovation answers.</li><li><b>Atlas</b>: review passed. Next, mapping.</li></ul>");
-  await sleep(2800);
-
-  // A task, claimed.
-  t = post("tasks", "Berto", "Northwind: write the spec", { who: "Berto", html: "From relay's answer: write the spec so the build gate can run." });
-  pulse(hoodOf("tasks"));
-  open(t);
-  await sleep(1600);
-  t.messages.push({ who: "claude", via: "agent", agent: true, html: "Claimed. Reading the 44 answers first." });
-  setState(t, "held");
-  setAgent("claude", "holds Northwind spec");
-  draw();
-  await sleep(2800);
-
-  // Feedback, triaged and turned into a task.
-  openChannel("feedback");
-  await type("Atlas pricing page: the row reads “not found not found”.");
-  t = post("feedback", "Berto", "Atlas: pricing row says “not found not found”", { who: "Berto", html: "Atlas pricing page: the row reads “not found not found”." });
-  pulse(hoodOf("feedback"));
-  open(t);
-  await relayAnswers(t, "board.read, ask_projects", "<ul><li><b>Page:</b> Atlas, pricing</li><li><b>Ask:</b> the label and the value both say “not found”.</li><li><b>Heard before:</b> partly, a decision on 24 Nov.</li></ul>");
   await sleep(2200);
-  const fix = post("tasks", "relay", "Atlas: fix the not-found labels", { who: "relay", via: "agent", agent: true, html: "Opened from #feedback." });
-  pulse(hoodOf("tasks"));
-  await sleep(1400);
-  fix.messages.push({ who: "codex", via: "agent", agent: true, html: "Claimed." });
-  setState(fix, "held");
-  setAgent("codex", "holds Atlas labels");
-  open(fix);
-  await sleep(3000);
 
-  // Work lands.
-  const spec = threads.find((x) => x.title.startsWith("Northwind: write"))!;
-  spec.messages.push({ who: "claude", via: "agent", agent: true, html: "Spec written: 12 requirements, each with a check." });
-  setState(spec, "done");
-  setAgent("claude", "idle");
-  open(spec);
-  pulse(hoodOf("tasks"));
-  await sleep(5000);
-  morning();
+  city.focus(BOARD, WIDE);
+  await sleep(5500);
+  story();
 }
 
 renderer.ready
   .then(() => {
     requestAnimationFrame(drawLabels);
-    return morning();
+    return story();
   })
   .catch((e) => console.warn("WebGPU unavailable", e));
