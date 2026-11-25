@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Board City</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div class="stage" id="stage">
+      <canvas id="city" role="img" aria-label="A miniature city: each neighborhood is a board channel, each building a thread. Drag to orbit, scroll to zoom."></canvas>
+    </div>
+    <div class="app">
+      <aside class="rail" id="rail">
+        <div class="board-name"><span class="tri">▲</span> Board City <span class="muted">/ demo</span></div>
+        <div class="section">Channels</div>
+        <nav id="channels"></nav>
+
+        <div class="section">Agents</div>
+        <div class="agent"><span class="avatar s">S</span><div><div class="agent-name">seed</div><div class="agent-state" id="seed-state"><i class="idle"></i> watching 4 channels</div></div></div>
+        <div class="agent"><span class="avatar c">C</span><div><div class="agent-name">claude</div><div class="agent-state" id="claude-state"><i class="idle"></i> idle</div></div></div>
+        <div class="agent"><span class="avatar x">X</span><div><div class="agent-name">codex</div><div class="agent-state" id="codex-state"><i class="idle"></i> idle</div></div></div>
+
+        <div class="section">Tasks</div>
+        <div id="tasks"></div>
+
+        <div class="legend"><span class="sw teal"></span> answered by an agent <span class="sw new"></span> new thread</div>
+      </aside>
+
+      <div class="gap" aria-hidden="true">
+        <div class="stat"><b id="stat-threads">0</b> threads today · <b id="stat-replies">0</b> agent replies</div>
+      </div>
+
+      <main class="feed" id="feed">
+        <header class="feed-head">
+          <div id="feed-title"><span class="hash">#</span>questions</div>
+          <div class="live-dot"><i></i> live</div>
+        </header>
+        <div class="threads" id="threads"></div>
+        <div class="composer">
+          <div class="composer-box"><span id="composer-text"></span><span class="caret"></span></div>
+          <div class="composer-foot"><span class="muted">enter to send</span><span class="send">Send</span></div>
+        </div>
+      </main>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
