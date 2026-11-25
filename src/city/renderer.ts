@@ -15,6 +15,8 @@ interface RendererOptions {
   readonly hideControls?: boolean;
   /** board-gpu: CSS px the page's panels cover on each side, so the city frames in the gap. */
   readonly inset?: () => { readonly left: number; readonly right: number };
+  /** board-gpu: called after a pointer pick changes the selection, with the selected building (0 when none). */
+  readonly onSelect?: (building: number, neighborhood: number) => void;
 }
 
 /** board-gpu: what the board does to the city. Every call is a no-op until the city is ready. */
@@ -28,6 +30,15 @@ export interface CityBoard {
   /** Select a building, which the city outlines. */
   select(id: number): void;
   neighborhoodNames(): string[];
+  /** Remove every building in a neighborhood, so a channel starts as an empty block. */
+  clear(neighborhood: number): void;
+  /** Repaint every building outside `keep` with one swatch, so color only carries state. */
+  paintAllExcept(keep: readonly number[], swatch: number): void;
+  selectNeighborhood(neighborhood: number): void;
+  /** Where a neighborhood's center sits on screen, in CSS px, or null when it is behind the camera. */
+  screenPosition(neighborhood: number, outward?: number): { x: number; y: number } | null;
+  /** Turn the idle orbit on or off (the board's Pause control). */
+  autoOrbit(on: boolean): void;
 }
 
 interface Settings {
@@ -52,7 +63,7 @@ const GUI_WIDTH = 248;
 const FIT_ASPECT = 1.28;
 const MAX_FIT = 2.4;
 
-export function createRenderer({ canvas, container = canvas.parentElement ?? undefined, hideControls = false, inset }: RendererOptions) {
+export function createRenderer({ canvas, container = canvas.parentElement ?? undefined, hideControls = false, inset, onSelect }: RendererOptions) {
   let disposed = false;
   let failed = false;
   let gpu: Gpu | undefined;
@@ -64,6 +75,7 @@ export function createRenderer({ canvas, container = canvas.parentElement ?? und
   let loop: { stop(): void } | undefined;
   let unsubscribeResize: (() => void) | undefined;
   let syncGui: (() => void) | undefined;
+  let liveSettings: Settings | undefined;
   const picks = new PickQueue();
   const goal: OrbitRig = orbitRig(HOME_VIEW);
   const current: OrbitRig = orbitRig(HOME_VIEW);
@@ -149,6 +161,7 @@ export function createRenderer({ canvas, container = canvas.parentElement ?? und
           if (code === undefined) return;
           city.select(code);
           syncGui?.();
+          onSelect?.(city.selection.building, city.selection.neighborhood);
         },
         (error: unknown) => {
           picks.abandon(request);
@@ -188,6 +201,7 @@ export function createRenderer({ canvas, container = canvas.parentElement ?? und
 
     const ticks = clock(gpu);
     const { settings } = controls;
+    liveSettings = settings;
     const framed: OrbitRig = orbitRig(HOME_VIEW);
     const shown = { shift: 0, fit: 1 };
     let firstFrame = true;
@@ -238,6 +252,41 @@ export function createRenderer({ canvas, container = canvas.parentElement ?? und
       syncGui?.();
     }),
     neighborhoodNames: () => city?.neighborhoods.map(({ plan }) => plan.name) ?? [],
+    clear: (neighborhood) => guard(() => {
+      if (!city) return;
+      for (const id of city.buildingIds(neighborhood)) city.remove(id);
+    }),
+    paintAllExcept: (keep, swatch) => guard(() => {
+      if (!city) return;
+      for (const hood of city.neighborhoods) {
+        if (keep.includes(hood.plan.index)) continue;
+        for (const id of city.buildingIds(hood.plan.index)) {
+          if (city.building(id)?.kind !== "grove") city.recolor(id, swatch);
+        }
+      }
+    }),
+    selectNeighborhood: (neighborhood) => guard(() => {
+      city?.selectNeighborhood(neighborhood);
+      syncGui?.();
+    }),
+    autoOrbit: (on) => {
+      if (liveSettings) liveSettings.autoOrbit = on;
+    },
+    screenPosition: (neighborhood, outward = 0) => {
+      if (!city || !pipeline) return null;
+      const hood = city.neighborhoods[neighborhood];
+      if (!hood) return null;
+      const m = pipeline.camera.matrices.viewProjection;
+      // `outward` moves the point toward the block's outer corner, away from the city center.
+      const x = hood.plan.center[0] + hood.offset.x + Math.sign(hood.plan.center[0]) * outward;
+      const y = 1.2 + hood.offset.lift;
+      const z = hood.plan.center[1] + hood.offset.z + Math.sign(hood.plan.center[1]) * outward;
+      const cw = m[3]! * x + m[7]! * y + m[11]! * z + m[15]!;
+      if (cw <= 0) return null;
+      const cx = (m[0]! * x + m[4]! * y + m[8]! * z + m[12]!) / cw;
+      const cy = (m[1]! * x + m[5]! * y + m[9]! * z + m[13]!) / cw;
+      return { x: (cx * 0.5 + 0.5) * canvas.clientWidth, y: (0.5 - cy * 0.5) * canvas.clientHeight };
+    },
   };
 
   return { ready, dispose, board };

@@ -3,46 +3,62 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#efebe3" />
     <title>Board City</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
+    <a class="skip" href="#threads">Skip to Threads</a>
     <div class="stage" id="stage">
-      <canvas id="city" role="img" aria-label="A miniature city: each neighborhood is a board channel, each building a thread. Drag to orbit, scroll to zoom."></canvas>
+      <canvas id="city" role="img" aria-label="The board as a city. Each lit block is a channel and each building in it is a thread, colored by its state. Drag to orbit, scroll to zoom, click a building to open its thread."></canvas>
+      <div class="labels" id="labels" aria-hidden="true"></div>
     </div>
+
     <div class="app">
-      <aside class="rail" id="rail">
-        <div class="board-name"><span class="tri">▲</span> Board City <span class="muted">/ demo</span></div>
-        <div class="section">Channels</div>
-        <nav id="channels"></nav>
+      <aside class="rail" aria-label="Board">
+        <header class="brand">
+          <span class="mark" aria-hidden="true">▲</span>
+          <span translate="no">Board City</span>
+          <button type="button" id="pause" class="pause" aria-pressed="false">Pause</button>
+        </header>
 
-        <div class="section">Agents</div>
-        <div class="agent"><span class="avatar s">S</span><div><div class="agent-name">seed</div><div class="agent-state" id="seed-state"><i class="idle"></i> watching 4 channels</div></div></div>
-        <div class="agent"><span class="avatar c">C</span><div><div class="agent-name">claude</div><div class="agent-state" id="claude-state"><i class="idle"></i> idle</div></div></div>
-        <div class="agent"><span class="avatar x">X</span><div><div class="agent-name">codex</div><div class="agent-state" id="codex-state"><i class="idle"></i> idle</div></div></div>
+        <section aria-labelledby="channels-h">
+          <h2 id="channels-h" class="eyebrow">Channels</h2>
+          <ul class="channels" id="channels" translate="no"></ul>
+        </section>
 
-        <div class="section">Tasks</div>
-        <div id="tasks"></div>
+        <section aria-labelledby="agents-h">
+          <h2 id="agents-h" class="eyebrow">Agents</h2>
+          <ul class="agents" id="agents" translate="no"></ul>
+        </section>
 
-        <div class="legend"><span class="sw teal"></span> answered by an agent <span class="sw new"></span> new thread</div>
+        <section class="key" aria-labelledby="key-h">
+          <h2 id="key-h" class="eyebrow">Key</h2>
+          <ul>
+            <li><span class="swatch waiting"></span>Waiting for an answer</li>
+            <li><span class="swatch answered"></span>Answered by an agent</li>
+            <li><span class="swatch held"></span>Task held by an agent</li>
+            <li><span class="swatch done"></span>Done</li>
+          </ul>
+        </section>
       </aside>
 
-      <div class="gap" aria-hidden="true">
-        <div class="stat"><b id="stat-threads">0</b> threads today · <b id="stat-replies">0</b> agent replies</div>
-      </div>
-
-      <main class="feed" id="feed">
+      <main class="feed" aria-labelledby="feed-title">
         <header class="feed-head">
-          <div id="feed-title"><span class="hash">#</span>questions</div>
-          <div class="live-dot"><i></i> live</div>
+          <div>
+            <h1 id="feed-title"># questions</h1>
+            <p class="feed-sub" id="feed-sub"></p>
+          </div>
+          <span class="live"><span class="pulse" aria-hidden="true"></span>Live</span>
         </header>
-        <div class="threads" id="threads"></div>
-        <div class="composer">
-          <div class="composer-box"><span id="composer-text"></span><span class="caret"></span></div>
-          <div class="composer-foot"><span class="muted">enter to send</span><span class="send">Send</span></div>
-        </div>
+        <ol class="threads" id="threads" aria-live="polite" tabindex="-1" translate="no"></ol>
+        <form class="composer" onsubmit="return false">
+          <div class="composer-box" id="composer" role="textbox" aria-readonly="true" aria-label="Message, typed by the demo"><span id="composer-text"></span><span class="caret" aria-hidden="true"></span></div>
+          <div class="composer-foot"><span>Enter to send</span><button type="button" class="send" tabindex="-1">Send</button></div>
+        </form>
       </main>
     </div>
     <script type="module" src="/src/main.ts"></script>

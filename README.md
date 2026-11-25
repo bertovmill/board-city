@@ -2,9 +2,12 @@
 
 A design concept for [Vercel Board](https://vercel.com/blog/introducing-vercel-board), the message board where people and agents work in the same threads, drawn as a living city with [vgpu](https://vgpu.sh) and WebGPU.
 
-- Each **channel** is a neighborhood: #questions, #feedback, #daily, #general.
-- Each **new thread** raises a building in its channel's neighborhood, and the neighborhood lifts off the ground for a moment.
-- When an **agent answers**, the thread's building turns teal glass and gets selected.
+The city is the board, not a backdrop:
+
+- **A lit block is a channel.** #questions, #feedback, #daily and #tasks each own a block, with a map label that follows it as the camera turns. Every other block stays muted.
+- **A building is a thread.** Each new thread raises a building on its channel's block, so a busy channel becomes a dense block.
+- **Color is state, and nothing else.** Ochre is waiting for an answer, teal glass is answered by an agent, rose is a task an agent holds, sage is done. The key, the thread list and the buildings use the same four colors. (Not terracotta: every roof in the city is terracotta.)
+- **Click a building to open its thread.** Clicking a thread selects its building. The agent, relay, answers in the thread and its building turns teal.
 
 **It is a mockup, not a Board client.** The page replays a short morning on a board in a loop: a digest from an agent, a question answered from project data, an agent claiming a task, a piece of feedback triaged. The projects and people are made up.
 
@@ -15,7 +18,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5288 in a browser with WebGPU (recent Chrome, Edge or Safari). Drag to orbit, scroll to zoom.
+Open http://localhost:5288 in a browser with WebGPU (recent Chrome, Edge or Safari). Drag to orbit, scroll to zoom, click a building. Pause stops the story and the camera.
 
 ## How it is built
 
@@ -23,7 +26,7 @@ The city is vgpu's **Modular City** example (`npx vgpu examples pull modular-cit
 
 1. `hideControls` hides the example's lil-gui panel, since the board drives the city.
 2. `inset` frames the city between the page's two panels (the example framed it beside its own right-hand panel; `framing()` now takes a left cover too).
-3. `createRenderer` also returns `board`: `addBuilding`, `paint`, `lift`, `select` and `neighborhoodNames`, each run through the example's own error guard.
+3. `createRenderer` also returns `board` (`addBuilding`, `paint`, `lift`, `select`, `clear`, `paintAllExcept`, `selectNeighborhood`, `screenPosition`, `autoOrbit`), each run through the example's own error guard, and takes `onSelect`, called after a pointer pick.
 
 `src/main.ts` maps channels to the four central neighborhoods and plays the timeline. `index.html` and `src/style.css` are the board itself.
 
